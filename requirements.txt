@@ -1,5 +1,9 @@
-altair
 numpy
 pandas
-pydeck
+redis
+opencv-python-headless
+scikit-learn
 streamlit
+streamlit-webrtc
+insightface
+onnxruntime
