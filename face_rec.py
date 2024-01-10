@@ -7,6 +7,7 @@ import redis
 # insight face
 from insightface.app import FaceAnalysis
 from sklearn.metrics import pairwise
+from localdb import LocalDB
 # time
 import time
 from datetime import datetime
@@ -17,17 +18,20 @@ import os
 
 
 # Connect to Redis Client
-hostname = 'redis-10979.c325.us-east-1-4.ec2.cloud.redislabs.com'
-portnumber = 10979
-password = 'GWVgMSfgj1LpLCevrcAXKaZiYiFwNsls'
+hostname = "redis-11244.c323.us-east-1-2.ec2.cloud.redislabs.com"
+portnumber = 11244
+password = "cwwFaiD50FXDQa7Yc16beWEjANlkGFWJ"
 
-r = redis.StrictRedis(host=hostname,
+redisObj = redis.StrictRedis(host=hostname,
                       port=portnumber,
                       password=password)
 
+localDB = LocalDB("localdatabase.sqlite")
+
+
 # Retrive Data from database
 def retrive_data(name):
-    retrive_dict= r.hgetall(name)
+    retrive_dict= redisObj.hgetall(name)
     retrive_series = pd.Series(retrive_dict)
     retrive_series = retrive_series.apply(lambda x: np.frombuffer(x,dtype=np.float32))
     index = retrive_series.index
@@ -38,6 +42,14 @@ def retrive_data(name):
     retrive_df[['Name','Role']] = retrive_df['name_role'].apply(lambda x: x.split('@')).apply(pd.Series)
     return retrive_df[['Name','Role','facial_features']]
 
+def retrieve_loginout_data():
+    data = localDB.retrieve_time_data()
+    df = pd.DataFrame(
+        data,
+        columns=["name", "role", "status", "amIN", "amOUT", "pmIN", "pmOUT", "date"],
+    )
+    result_data = {col: pd.Series(df[col]).tolist() for col in df.columns}
+    return result_data
 
 # configure face analysis
 faceapp = FaceAnalysis(name='buffalo_sc',root='insightface_model', providers = ['CPUExecutionProvider'])
@@ -101,7 +113,7 @@ class RealTimePred:
                 encoded_data.append(concat_string)
                 
         if len(encoded_data) >0:
-            r.lpush('attendance:logs',*encoded_data)
+            redisObj.lpush('attendance:logs',*encoded_data)
         
                     
         self.reset_dict()     
@@ -198,7 +210,7 @@ class RegistrationForm:
         
         # step-4: save this into redis database
         # redis hashes
-        r.hset(name='academy:register',key=key,value=x_mean_bytes)
+        redisObj.hset(name='academy:register',key=key,value=x_mean_bytes)
         
         # 
         os.remove('face_embedding.txt')
