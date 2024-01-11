@@ -1,5 +1,5 @@
 import streamlit as st
-from Home import face_rec
+from Home import facedetection
 import cv2
 import numpy as np
 from streamlit_webrtc import webrtc_streamer
@@ -10,7 +10,7 @@ import av
 st.subheader('Registration Form')
 
 ## init registration form
-registration_form = face_rec.RegistrationForm()
+registration_form = facedetection.RegistrationForm()
 
 # Step-1: Collect person name and role
 # form

@@ -6,6 +6,7 @@ from io import BytesIO
 import redis
 import random
 # insight face
+import streamlit as st
 from insightface.app import FaceAnalysis
 from sklearn.metrics import pairwise
 from localdb import LocalDB
@@ -130,7 +131,10 @@ class RealTimePred:
                 # date = d_time['date']
                 date = ""
                 if selecteddate != None:
-                    date = selecteddate
+                    final_format = "%m-%d-%Y"
+                    formatted_date_str = selecteddate.strftime(final_format)
+                    # Format date to accepted by database
+                    date = formatted_date_str
                 state = ""
                 if remark != None:
                     state = remark
@@ -156,7 +160,8 @@ class RealTimePred:
                 else:
                     data = {"date": date, "name": name,
                             "AM-OUT": hour, 'state': state}
-                logging.debug(f"DATA : {data} |  INFO : {d_time}")
+                    
+                # logging.debug(f"DATA : {data} |  INFO : {d_time}")
 
                 # Add or update data in the hash with a unique identifier
                 # this function also decides whether to insert a new hash or update an existing hash
@@ -168,10 +173,12 @@ class RealTimePred:
                 else:
                     logging.debug(f"Failed to add or update data in {base_key}")
 
-        if len(encoded_data) > 0:
-            redisObj.lpush("attendance:logs", *encoded_data)
+        # if len(encoded_data) > 0:
+        #     redisObj.lpush("attendance:logs", *encoded_data)
 
         self.reset_dict()
+        print("LOGIN SUCCESSFUL")
+        # st.success("SUCCESSFUL LOGIN")
 
     # TODO:
     def save_timein(self):
