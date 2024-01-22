@@ -1,13 +1,15 @@
 import streamlit as st
 
+# init localdatabase
+# from extra.localdb import LocalDB
 
 
 st.set_page_config(page_title='Attendance System',layout='wide')
 
 st.header('Attendance System using Face Recognition')
 
-with st.spinner("Loading Models and Conneting to Redis db ..."):
-    import facedetection
+# with st.spinner("Loading Models and Conneting to Redis db ..."):
+import facedetection
     
 st.success('Model loaded sucesfully')
 st.success('Redis db sucessfully connected')

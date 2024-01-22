@@ -1,67 +1,61 @@
+import importlib
 import streamlit as st
-from Home import facedetection
+# from Home import facedetection
+import Home as face
 from streamlit_webrtc import webrtc_streamer
 import av
 import time
 
-st.header("DEMO PURPOSES")
-##
-st.subheader("SET IF TIME IN/OUT")
-options = ['IN', 'OUT']
-selected_option = st.radio('STATE:', options)
-st.write('You selected:', selected_option)
-##
-st.subheader("SET IF TIME IN/OUT")
-options2 = ['LATE', 'INTIME']
-selected_option2 = st.radio('REMARKS:', options2)
-st.write('You selected:', selected_option2)
-##
-# Date input widget with custom styling
-selected_date = st.date_input('Select a date:', key='custom_date_input')
+# def reimport():
+#     importlib.reload(face)
+#     print('Reimport done')
 
-# Display the selected date
-st.write('Selected Date:', selected_date)
+# st.button('ReImport Libs', on_click=reimport)
+###################################################
+st.title("FACERECOGNITION TIME IN/OUT")
+###################################################
+st.markdown("<hr>", unsafe_allow_html=True)
+###################################################
+col1, col2, col3 = st.columns(3)
+with col1:
+    # st.button("HELLO WORLD1")
+    st.subheader("SET IN/OUT")
+    options = ['IN', 'OUT']
+    selected_option = st.radio(' ', options)
+    st.write('You selected:', selected_option)
+with col2:
+    # st.button("HELLO WORLD2")
+    st.subheader("SET REMARKS")
+    options2 = ['LATE', 'INTIME']
+    selected_option2 = st.radio(' ', options2)
+    st.write('You selected:', selected_option2)
+with col3:
+    st.subheader("SELECT A DATE:")
+    selected_date = st.date_input(' ', key='custom_date_input')
+    # Display the selected date
+    st.write('Selected Date:', selected_date)
+###################################################
+st.markdown("<hr>", unsafe_allow_html=True)
+st.subheader("TEST TIMEIN BUTTON")
+timein = st.button('TEST TIMEIN', 'testbtn',
+                   on_click=lambda: print("CALL TIME FUNCTION"))
+st.markdown("<hr>", unsafe_allow_html=True)
+###################################################
 
+container = st.container()
+with container:
+    st.subheader('Real-Time Attendance System')
+    # Retrive the data from Redis Database
+    with st.spinner('Retriving Data from Redis DB ...'):
+        redis_face_db = face.facedetection.retrive_data(name='academy:register')
+        st.dataframe(redis_face_db)
 
-def show_message_box(message, message_type='info'):
-    if message_type == 'success':
-        st.success(message)
-    elif message_type == 'info':
-        st.info(message)
-    elif message_type == 'warning':
-        st.warning(message)
-    elif message_type == 'error':
-        st.error(message)
-
-# if st.button("Click me to show MessageBox"):
-#     # Show a success message box
-#     # show_message_box(f"This is a success message!", message_type='info')
-
-#     final_format = "%m-%d-%Y"
-#     formatted_date_str = selected_date.strftime(final_format)
-#     st.success(f"DATE : {formatted_date_str}")
-
-    # show_message_box(f"IN/OUT : {selected_option}  STATE : {selected_option2}  DATE : {selected_date}", message_type='success')
-
-
-async def show_message(message):
-    # Your asynchronous code here
-    st.success(message)
-
-
-# st.set_page_config(page_title='Predictions')
-st.subheader('Real-Time Attendance System')
-# Retrive the data from Redis Database
-with st.spinner('Retriving Data from Redis DB ...'):
-    redis_face_db = facedetection.retrive_data(name='academy:register')
-    st.dataframe(redis_face_db)
-
-st.success("Data sucessfully retrived from Redis")
+    st.success("Data sucessfully retrived from Redis")
 
 # time
 waitTime = 5  # time in sec
 setTime = time.time()
-realtimepred = facedetection.RealTimePred()  # real time prediction class
+realtimepred = face.facedetection.RealTimePred()  # real time prediction class
 
 # Real Time Prediction
 # streamlit webrtc
@@ -75,7 +69,6 @@ def video_frame_callback(frame):
     # operation that you can perform on the array
     pred_img = realtimepred.face_prediction(img, redis_face_db,
                                             'facial_features', ['Name', 'Role'], thresh=0.5)
-
     timenow = time.time()
     difftime = timenow - setTime
     if difftime >= waitTime:
@@ -86,7 +79,6 @@ def video_frame_callback(frame):
         # show_message("SUCCESSFULLY LOGOUT")
 
     return av.VideoFrame.from_ndarray(pred_img, format="bgr24")
-
 
 webrtc_streamer(key="realtimePrediction", video_frame_callback=video_frame_callback,
                 rtc_configuration={

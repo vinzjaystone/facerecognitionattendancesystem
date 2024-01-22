@@ -8,7 +8,7 @@ import random
 # insight face
 from insightface.app import FaceAnalysis
 from sklearn.metrics import pairwise
-from localdb import LocalDB
+from extra.localdb import LocalDB
 # time
 from datetime import datetime
 import os

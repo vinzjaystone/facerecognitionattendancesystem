@@ -70,7 +70,8 @@ def get_data(redisObj, keys, fields_to_include):
             value = redisObj.hget(key, field)
             decoded_value = value.decode('utf-8') if value else None
             values[field] = decoded_value
-        data.append({'key': key.decode('utf-8'), **values})
+            # print(f'Including : {field}  and Value : {decoded_value}')
+        data.append(values)
     return data
 
 
@@ -90,5 +91,8 @@ def retrievetime(redisObj):
     csv_as_bytes = df.to_csv(index=False).encode('utf-8')
     st.download_button("Download CSV", BytesIO(csv_as_bytes),
                        file_name='data.csv', key='download_csv')
+
+
+    # print(f"Data is : {data}")
 
     return data

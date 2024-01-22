@@ -1,8 +1,32 @@
 import streamlit as st 
 from Home import facedetection
+from facedetection import *
 import pandas as pd
+import calendar
 # st.set_page_config(page_title='Reporting',layout='wide')
 st.subheader('Reporting')
+
+
+##################################################
+# ATTENDANCE TRACKING  #
+def days_per_week(year, month):
+    # Get the calendar for the given month and year
+    cal = calendar.monthcalendar(year, month)
+
+    # Initialize a list to store the days per week
+    days_by_week = []
+
+    # Iterate over the weeks in the month
+    for week in cal:
+        # Filter out days that belong to the previous or next month
+        days_in_week = [day for day in week if day != 0]
+        days_by_week.append(days_in_week)
+
+    return days_by_week
+##################################################
+
+
+
 
 
 # Retrive logs data and show in Report.py
@@ -13,7 +37,7 @@ def load_logs(name,end=-1):
     return logs_list
 
 # tabs to show the info
-tab1, tab2, tab3 = st.tabs(['Registered Data','Logs', 'Test TimeInOut'])
+tab1, tab2, tab3, tab4 = st.tabs(['Registered Data','Logs', 'Test TimeInOut', 'Attendance Tracking'])
 
 with tab1:
     if st.button('Refresh Data'):
@@ -37,5 +61,85 @@ with tab3:
 
         with st.spinner('Retriving Data from Redis DB ...'):    
             redis_face_db = facedetection.getTimeInOut()
+            print(redis_face_db)
             st.dataframe(redis_face_db)
+
+with tab4:
+    def change():
+        print(f'WIDGET CHANGE : {users}')
+
+    st.subheader("Attendance Tracking")
+    # data = []
+    # data.append({'name': 'vinz', 'age': 31})
+    # data.append({'name': 'clarissa', 'age': 26})
+    names = tuple(['vinz', 'Unknown'])
+    users = st.selectbox(label='Select Person',options=names, on_change=change)
+    localData = retrieve_local_data2(users)
+    if localData:
+        df = pd.DataFrame(localData)
+        # st.dataframe(df)
+        st.markdown("<hr>", unsafe_allow_html=True)
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.subheader("JANUARY")
+            st.write("Present : 9")
+            st.write("Absent : 1")
+        with col2:
+            st.subheader("FEBRUARY")
+            st.write("Present : 9")
+            st.write("Absent : 1")
+        with col3:
+            st.subheader("MARCH")
+            st.write("Present : 9")
+            st.write("Absent : 1")
+        with col4:
+            st.subheader("APRIL")
+            st.write("Present : 9")
+            st.write("Absent : 1")
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+        col5, col6, col7, col8 = st.columns(4)
+        with col5:
+            st.subheader("MAY")
+            st.write("Present : 9")
+            st.write("Absent : 1")
+        with col6:
+            st.subheader("JUNE")
+            st.write("Present : 9")
+            st.write("Absent : 1")
+        with col7:
+            st.subheader("JULY")
+            st.write("Present : 9")
+            st.write("Absent : 1")
+        with col8:
+            st.subheader("AUGUST")
+            st.write("Present : 9")
+            st.write("Absent : 1") 
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+        col9, col10, col11, col12 = st.columns(4)
+        with col9:
+            st.subheader("SEPTEMBER")
+            st.write("Present : 9")
+            st.write("Absent : 1")
+        with col10:
+            st.subheader("OCTOBER")
+            st.write("Present : 9")
+            st.write("Absent : 1")
+        with col11:
+            st.subheader("NOVEMBER")
+            st.write("Present : 9")
+            st.write("Absent : 1")
+        with col12:
+            st.subheader("DECEMBER")
+            st.write("Present : 9")
+            st.write("Absent : 1") 
+    # localData = retrieve_local_data2()
+
+    
+    # df = pd.DataFrame(localData)
+
+    
+    # st.dataframe(df)
+    
 
