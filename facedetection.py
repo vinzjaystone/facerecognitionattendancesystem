@@ -17,18 +17,23 @@ from streamlit_util import add_or_update_data, do_timein, retrievetime
 
 
 # Connect to Redis Client
-hostname = "redis-11244.c323.us-east-1-2.ec2.cloud.redislabs.com"
-portnumber = 11244
-password = "cwwFaiD50FXDQa7Yc16beWEjANlkGFWJ"
+# hostname = "redis-11244.c323.us-east-1-2.ec2.cloud.redislabs.com"
+user = 'vinz'
+hostname = "172.104.35.79"
+# portnumber = 11244
+portnumber = 6379
+# password = "cwwFaiD50FXDQa7Yc16beWEjANlkGFWJ"
+password = "testpassword"
 
-redisObj = redis.StrictRedis(host=hostname, port=portnumber, password=password)
-
+redisObj = redis.StrictRedis(host=hostname, port=portnumber, password=password, decode_responses=False)
 localDB = LocalDB("./database/timeinout.db")
 
 
 # Retrive Data from database
 def retrive_data(name):
     retrive_dict = redisObj.hgetall(name)
+
+
     retrive_series = pd.Series(retrive_dict)
     retrive_series = retrive_series.apply(
         lambda x: np.frombuffer(x, dtype=np.float32))
