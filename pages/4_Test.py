@@ -22,8 +22,10 @@ tab1, tab2 = st.tabs(['Open Camera', 'Tab 2'])
 
 
 
-redis_face_db = face.facedetection.retrive_data(name='academy:register')
+redis_face_db = face.facedetection.retrive_data2(name='academy:register')
 realtimepred = face.facedetection.RealTimePred()  # real time prediction class
+
+print(redis_face_db)
 
 # Real Time Prediction
 # streamlit webrtc

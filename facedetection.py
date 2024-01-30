@@ -2,41 +2,66 @@ import logging
 import numpy as np
 import pandas as pd
 import cv2
+import csv
 from io import BytesIO
 import redis
 import random
+
 # insight face
 import streamlit as st
 from insightface.app import FaceAnalysis
 from sklearn.metrics import pairwise
 from extra.localdb import LocalDB
+
 # time
 from datetime import datetime
 import os
 from streamlit_util import add_or_update_data, do_timein, retrievetime
 
+from ast import literal_eval
 
 # Connect to Redis Client
-# hostname = "redis-11244.c323.us-east-1-2.ec2.cloud.redislabs.com"
-user = 'vinz'
-hostname = "172.104.35.79"
-# portnumber = 11244
-portnumber = 6379
-# password = "cwwFaiD50FXDQa7Yc16beWEjANlkGFWJ"
-password = "testpassword"
+hostname = "redis-11244.c323.us-east-1-2.ec2.cloud.redislabs.com"
+portnumber = 11244
+password = "cwwFaiD50FXDQa7Yc16beWEjANlkGFWJ"
 
-redisObj = redis.StrictRedis(host=hostname, port=portnumber, password=password, decode_responses=False)
+redisObj = redis.StrictRedis(
+    host=hostname, port=portnumber, password=password, decode_responses=False
+)
 localDB = LocalDB("./database/timeinout.db")
 
 
-# Retrive Data from database
+def retrive_data2(name):
+    """
+    Retrieve data from a local CSV File
+    """
+    # CSV LOADING
+    file_path = "./database/facedatabase.csv"
+    df = pd.read_csv(file_path)
+
+    # Transform Data (assuming 'facial_features' column contains string representations of arrays)
+    df["facial_features"] = df["facial_features"].apply(
+        lambda x: np.array(literal_eval(x), dtype=np.float32)
+    )
+
+    # Create DataFrame
+    df["name_role"] = df["Name"] + "@" + df["Role"]
+    retrive_df = df[["name_role", "facial_features"]].copy()
+    retrive_df["Name"] = df["Name"]
+    retrive_df["Role"] = df["Role"]
+
+    # Reorder columns to match data frame for streamlit
+    retrive_df = retrive_df[["Name", "Role", "facial_features"]]
+    return retrive_df
+
+
 def retrive_data(name):
+    """
+    Retrieve data from a Redis Server
+    """
     retrive_dict = redisObj.hgetall(name)
-
-
     retrive_series = pd.Series(retrive_dict)
-    retrive_series = retrive_series.apply(
-        lambda x: np.frombuffer(x, dtype=np.float32))
+    retrive_series = retrive_series.apply(lambda x: np.frombuffer(x, dtype=np.float32))
     index = retrive_series.index
     index = list(map(lambda x: x.decode(), index))
     retrive_series.index = index
@@ -52,16 +77,39 @@ def retrieve_local_data():
     data = localDB.retrieve_time_data()
     df = pd.DataFrame(
         data,
-        columns=["id", "name", "role", "tIn", "tOut", "date", "day", "month", "year", "remark"],
+        columns=[
+            "id",
+            "name",
+            "role",
+            "tIn",
+            "tOut",
+            "date",
+            "day",
+            "month",
+            "year",
+            "remark",
+        ],
     )
     result_data = {col: pd.Series(df[col]).tolist() for col in df.columns}
     return result_data
+
 
 def retrieve_local_data2(name):
     data = localDB.retrieve_time_data2(name)
     df = pd.DataFrame(
         data,
-        columns=["id", "name", "role", "tIn", "tOut", "date", "day", "month", "year", "remark"],
+        columns=[
+            "id",
+            "name",
+            "role",
+            "tIn",
+            "tOut",
+            "date",
+            "day",
+            "month",
+            "year",
+            "remark",
+        ],
     )
     result_data = {col: pd.Series(df[col]).tolist() for col in df.columns}
     return result_data
@@ -103,12 +151,14 @@ def ml_search_algorithm(
     else:
         person_name = "Unknown"
         person_role = "Unknown"
+        print('UNKNOWN FACE DETECTED!!!')
 
     return person_name, person_role
 
 
 def getTimeInOut():
     return retrievetime(redisObj)
+
 
 # Real Time Prediction
 # we need to save logs for every 1 mins
@@ -120,32 +170,33 @@ class RealTimePred:
 
     def reset_dict(self):
         self.logs = dict(name=[], role=[], current_time=[])
-    
+
     def save_to_localdb(self, data, inorout, role):
         # Add to local database too
         # init database object
-        DB_NAME = './database/timeinout.db'
+        DB_NAME = "./database/timeinout.db"
         db = LocalDB(DB_NAME)
         # prepare db keys
-        month, day, year = data['date'].split('-')
-        db_name = data['name']
+        month, day, year = data["date"].split("-")
+        db_name = data["name"]
         db_role = role
-        remark = data['state']
+        remark = data["state"]
         # Set as Blank or N/A
-        date = data['date']
+        date = data["date"]
         col_prefix = ""
 
         # CHECK FOR EXISTING ENTRY
-        query = f"SELECT COUNT(*) FROM timeinTBL WHERE name='{db_name}' and date='{date}' "
+        query = (
+            f"SELECT COUNT(*) FROM timeinTBL WHERE name='{db_name}' and date='{date}' "
+        )
         res = db.executeQuery(query, dbName=DB_NAME, ret=True)
-        count = res[0]['COUNT(*)'] 
-
+        count = res[0]["COUNT(*)"]
 
         if count < 1:
-            tIn = data['AM-IN']
-            tOut = 'N/A' 
+            tIn = data["AM-IN"]
+            tOut = "N/A"
             # check if timin is IN or OUT?
-            col_prefix = 'tIn'
+            col_prefix = "tIn"
             # if in its a new entry so INSERT
             query = f"""
                 INSERT into timeinTBL (name, role, tIn, tOut, date, day, month, year, remark)
@@ -153,17 +204,17 @@ class RealTimePred:
             """
             db.executeQuery(query, dbName=DB_NAME)
         else:
-            if inorout == 'IN':
-                col_prefix = 'tIn'
-                tIn = data['AM-IN']
+            if inorout == "IN":
+                col_prefix = "tIn"
+                tIn = data["AM-IN"]
                 query = f"""
                 UPDATE timeinTBL
                 SET {col_prefix} = '{tIn}'
                 WHERE name='{db_name}' and date='{date}'
                 """
             else:
-                col_prefix = 'tOut'
-                tOut = data['AM-OUT']
+                col_prefix = "tOut"
+                tOut = data["AM-OUT"]
                 query = f"""
                 UPDATE timeinTBL
                 SET {col_prefix} = '{tOut}'
@@ -191,8 +242,7 @@ class RealTimePred:
                 concat_string = f"{name}@{role}@{ctime}"
                 encoded_data.append(concat_string)
 
-
-                hour = d_time['hour']
+                hour = d_time["hour"]
                 # date = d_time['date']
                 date = ""
                 if selecteddate != None:
@@ -203,7 +253,7 @@ class RealTimePred:
                 state = ""
                 if remark != None:
                     state = remark
-                
+
                 # state = d_time['status']
                 # remarks = ""
                 # if remark != None:
@@ -218,14 +268,12 @@ class RealTimePred:
                 # if 1 set as IN if 2 set as OUT
                 # ran = random.randint(1, 2)
 
-                if inorout == 'IN':
+                if inorout == "IN":
                     # if ran == 1:
-                    data = {"date": date, "name": name,
-                            "AM-IN": hour, 'state': state}
+                    data = {"date": date, "name": name, "AM-IN": hour, "state": state}
                 else:
-                    data = {"date": date, "name": name,
-                            "AM-OUT": hour, 'state': state}
-                    
+                    data = {"date": date, "name": name, "AM-OUT": hour, "state": state}
+
                 # logging.debug(f"DATA : {data} |  INFO : {d_time}")
 
                 # Add or update data in the hash with a unique identifier
@@ -233,13 +281,11 @@ class RealTimePred:
                 added_or_updated = add_or_update_data(redisObj, base_key, data)
 
                 self.save_to_localdb(data, inorout, role)
-                
-                
-
 
                 if added_or_updated:
                     logging.debug(
-                        f"Data added or updated with unique identifier in {base_key}")
+                        f"Data added or updated with unique identifier in {base_key}"
+                    )
                 else:
                     logging.debug(f"Failed to add or update data in {base_key}")
             else:
@@ -247,7 +293,7 @@ class RealTimePred:
                 concat_string = f"Unkown@{role}{ctime}"
                 encoded_data.append(concat_string)
 
-                hour = d_time['hour']
+                hour = d_time["hour"]
                 # date = d_time['date']
                 date = ""
                 if selecteddate != None:
@@ -266,19 +312,16 @@ class RealTimePred:
                 # if 1 set as IN if 2 set as OUT
                 # ran = random.randint(1, 2)
 
-                if inorout == 'IN':
+                if inorout == "IN":
                     # if ran == 1:
-                    data = {"date": date, "name": name,
-                            "AM-IN": hour, 'state': state}
+                    data = {"date": date, "name": name, "AM-IN": hour, "state": state}
                 else:
-                    data = {"date": date, "name": name,
-                            "AM-OUT": hour, 'state': state}
-                    
-                print(f'DATA FOR DB : {base_key}  -  {data}')
+                    data = {"date": date, "name": name, "AM-OUT": hour, "state": state}
 
+                print(f"DATA FOR DB : {base_key}  -  {data}")
 
-                self.save_to_localdb(data, inorout, 'DEV')
-                
+                self.save_to_localdb(data, inorout, "DEV")
+
         # if len(encoded_data) > 0:
         #     redisObj.lpush("attendance:logs", *encoded_data)
 
@@ -319,6 +362,7 @@ class RealTimePred:
         name_role=["Name", "Role"],
         thresh=0.5,
     ):
+        print(f"Data Frame : {dataframe}")
         # step-1: find the time
         current_time = str(datetime.now())
 
@@ -346,8 +390,7 @@ class RealTimePred:
 
             text_gen = person_name
             cv2.putText(
-                test_copy, text_gen, (x1,
-                                      y1), cv2.FONT_HERSHEY_DUPLEX, 0.7, color, 2
+                test_copy, text_gen, (x1, y1), cv2.FONT_HERSHEY_DUPLEX, 0.7, color, 2
             )
             cv2.putText(
                 test_copy,
@@ -385,14 +428,69 @@ class RegistrationForm:
             # put text samples info
             text = f"samples = {self.sample}"
             cv2.putText(
-                frame, text, (x1,
-                              y1), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 0), 2
+                frame, text, (x1, y1), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 0), 2
             )
 
             # facial features
             embeddings = res["embedding"]
 
         return frame, embeddings
+
+    def save_data_in_csv(self, name, role):
+        # validation name
+        if name is not None:
+            if name.strip() != "":
+                key = f"{name}@{role}"
+            else:
+                return "name_false"
+        else:
+            return "name_false"
+
+        # if face_embedding.txt exists
+        if "face_embedding.txt" not in os.listdir():
+            return "file_false"
+
+        # step-1: load "face_embedding.txt"
+        x_array = np.loadtxt("face_embedding.txt", dtype=np.float32)  # flatten array
+
+        # step-2: convert into array (proper shape)
+        received_samples = int(x_array.size / 512)
+        x_array = x_array.reshape(received_samples, 512)
+        x_array = np.asarray(x_array)
+        # step-3: cal. mean embeddings
+        x_mean = x_array.mean(axis=0)
+        x_mean = x_mean.astype(np.float32)
+
+        new_row = pd.DataFrame(
+            {
+                "Name": [name],
+                "Role": [role],
+                "facial_features": [x_mean],
+                # "facial_features": [" ".join(map(str, x_mean))],
+            }
+        )
+        facial_features = ""
+        for i in x_mean:
+            facial_features += f"{i}, "
+        # print(f"Facial : {facial_features}")
+
+        file_path = "./database/facedatabase.csv"
+        new_index = 0  # Default index if the file is empty
+        if os.path.exists(file_path):
+            with open(file_path, "r") as file:
+                reader = csv.reader(file)
+                for row in reader:
+                    pass  # Loop through all rows to find the last index
+                new_index = int(row[0]) + 1
+
+        # Append the new data to the CSV file
+        with open(file_path, "a", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow([new_index, name, role, facial_features])
+
+        # print(f'Last Index is : {new_index}')
+        # print(new_index, Name, Role, Facial_Features)
+        return True
 
     def save_data_in_redis_db(self, name, role):
         # validation name
@@ -409,8 +507,7 @@ class RegistrationForm:
             return "file_false"
 
         # step-1: load "face_embedding.txt"
-        x_array = np.loadtxt("face_embedding.txt",
-                             dtype=np.float32)  # flatten array
+        x_array = np.loadtxt("face_embedding.txt", dtype=np.float32)  # flatten array
 
         # step-2: convert into array (proper shape)
         received_samples = int(x_array.size / 512)
